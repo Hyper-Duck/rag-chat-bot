@@ -1,4 +1,14 @@
-import { createElement, type ReactNode } from 'react'
+import {
+  createElement,
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
+import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -37,6 +47,12 @@ const tableTags = new Set([
   'col',
 ])
 
+const reactAttrMap: Record<string, string> = {
+  rowspan: 'rowSpan',
+  colspan: 'colSpan',
+  span: 'span',
+}
+
 const tableAttributeAllowlist: Record<string, string[]> = {
   td: ['colspan', 'rowspan'],
   th: ['colspan', 'rowspan'],
@@ -52,19 +68,37 @@ const sanitizeTableAttributes = (element: Element) => {
   const tagName = element.tagName.toLowerCase()
   const allowed = tableAttributeAllowlist[tagName]
   if (!allowed) return undefined
+
   const attributes: Record<string, string> = {}
+
   allowed.forEach((name) => {
     const value = element.getAttribute(name)
     if (value) {
-      attributes[name] = value
+      const reactName = reactAttrMap[name] ?? name
+      attributes[reactName] = value
     }
   })
+
   return attributes
 }
 
-const sanitizeNode = (node: Node, key: string): ReactNode[] => {
+const isTableContainer = (tagName?: string) =>
+  tagName === 'table' ||
+  tagName === 'thead' ||
+  tagName === 'tbody' ||
+  tagName === 'tfoot' ||
+  tagName === 'tr'
+
+const sanitizeNode = (node: Node, key: string, parentTag?: string): ReactNode[] => {
   if (node.nodeType === Node.TEXT_NODE) {
-    return [node.textContent ?? '']
+    const text = node.textContent ?? ''
+
+    // 在 table / tbody / tr 里：丢弃纯空白文本节点
+    if (parentTag && isTableContainer(parentTag)) {
+      if (text.trim() === '') return []
+    }
+
+    return [text]
   }
 
   if (node.nodeType !== Node.ELEMENT_NODE) {
@@ -73,8 +107,9 @@ const sanitizeNode = (node: Node, key: string): ReactNode[] => {
 
   const element = node as Element
   const tagName = element.tagName.toLowerCase()
+
   const children = Array.from(element.childNodes).flatMap((child, index) =>
-    sanitizeNode(child, `${key}-${index}`),
+    sanitizeNode(child, `${key}-${index}`, tagName),
   )
 
   if (!tableTags.has(tagName)) {
@@ -86,6 +121,7 @@ const sanitizeNode = (node: Node, key: string): ReactNode[] => {
 
   return [createElement(tagName, props, children)]
 }
+
 
 const sanitizeReferenceContent = (value: string): ReactNode => {
   if (!value || !hasTableMarkup(value)) {
@@ -128,33 +164,142 @@ const ReferenceIcon = ({
   chunk?: ReferenceChunk
   documentBaseUrl?: string
 }) => {
+  const containerRef = useRef<HTMLSpanElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [isPositioned, setIsPositioned] = useState(false)
+  const [popupStyle, setPopupStyle] = useState<CSSProperties>({ top: 0, left: 0 })
   const title = chunk?.document_name ?? 'Reference'
   const content = chunk?.content ?? 'Reference not available.'
   const documentId = chunk?.document_id ?? chunk?.id
   const documentUrl = buildDocumentUrl(documentBaseUrl, documentId)
   const sanitizedContent = sanitizeReferenceContent(content)
 
+  const isWithinPopup = useCallback((target: EventTarget | null) => {
+    if (!target || !(target instanceof Node)) return false
+    return (
+      (containerRef.current?.contains(target) ?? false) ||
+      (popupRef.current?.contains(target) ?? false)
+    )
+  }, [])
+
+  const openPopup = useCallback(() => {
+    setIsOpen(true)
+  }, [])
+
+  const closePopup = useCallback(() => {
+    setIsOpen(false)
+    setIsPositioned(false)
+  }, [])
+
+  const updatePlacement = useCallback(() => {
+    const container = containerRef.current
+    const popup = popupRef.current
+    if (!container || !popup || typeof window === 'undefined') return
+    const containerRect = container.getBoundingClientRect()
+    const popupRect = popup.getBoundingClientRect()
+
+    const margin = 8
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const shouldShowBelow = containerRect.top - popupRect.height < margin
+    const shouldShowLeft = containerRect.left + popupRect.width > viewportWidth - margin
+    const preferredTop = shouldShowBelow
+      ? containerRect.bottom + margin
+      : containerRect.top - popupRect.height - margin
+    const preferredLeft = shouldShowLeft ? containerRect.right - popupRect.width : containerRect.left
+    const top = Math.min(Math.max(preferredTop, margin), viewportHeight - popupRect.height - margin)
+    const left = Math.min(Math.max(preferredLeft, margin), viewportWidth - popupRect.width - margin)
+
+    setPopupStyle({ top, left })
+    setIsPositioned(true)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    setIsPositioned(false)
+    updatePlacement()
+  }, [isOpen, content, updatePlacement])
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return
+    const handleUpdate = () => updatePlacement()
+    window.addEventListener('resize', handleUpdate)
+    window.addEventListener('scroll', handleUpdate, true)
+    return () => {
+      window.removeEventListener('resize', handleUpdate)
+      window.removeEventListener('scroll', handleUpdate, true)
+    }
+  }, [isOpen, updatePlacement])
+
+  const popupClassName = [
+    'reference-icon__popup',
+    isOpen && isPositioned ? 'reference-icon__popup--open' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const popup = isOpen && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          ref={popupRef}
+          className={popupClassName}
+          style={popupStyle}
+          onMouseEnter={openPopup}
+          onMouseLeave={(event) => {
+            if (!isWithinPopup(event.relatedTarget)) {
+              closePopup()
+            }
+          }}
+          onFocus={openPopup}
+          onBlur={(event) => {
+            if (!isWithinPopup(event.relatedTarget)) {
+              closePopup()
+            }
+          }}
+        >
+          <div className="reference-icon__title">
+            {documentUrl ? (
+              <a className="reference-icon__title-link" href={documentUrl} target="_blank" rel="noreferrer">
+                {title}
+              </a>
+            ) : (
+              title
+            )}
+          </div>
+          <div className="reference-icon__content">{sanitizedContent}</div>
+        </div>,
+        document.body,
+      )
+    : null
+
   return (
-    <span className="reference-icon" role="button" tabIndex={0} aria-label={`Reference ${index}`}>
+    <span
+      ref={containerRef}
+      className="reference-icon"
+      role="button"
+      tabIndex={0}
+      aria-label={`Reference ${index}`}
+      onMouseEnter={openPopup}
+      onMouseLeave={(event) => {
+        if (!isWithinPopup(event.relatedTarget)) {
+          closePopup()
+        }
+      }}
+      onFocus={openPopup}
+      onBlur={(event) => {
+        if (!isWithinPopup(event.relatedTarget)) {
+          closePopup()
+        }
+      }}
+    >
       <span className="reference-icon__badge">{index}</span>
-      <div className="reference-icon__popup">
-        <div className="reference-icon__title">
-          {documentUrl ? (
-            <a className="reference-icon__title-link" href={documentUrl} target="_blank" rel="noreferrer">
-              {title}
-            </a>
-          ) : (
-            title
-          )}
-        </div>
-        <div className="reference-icon__content">{sanitizedContent}</div>
-      </div>
+      {popup}
     </span>
   )
 }
 
 export function ChatBubble({ role, content, references, documentBaseUrl }: ChatBubbleProps) {
-  console.log(content, references)
   const isAssistant = role === 'assistant'
   const referenceChunks = references?.chunks ?? []
   const markdownContent = injectReferenceLinks(content)

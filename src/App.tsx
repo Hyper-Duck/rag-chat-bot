@@ -172,49 +172,6 @@ function App() {
     }
   }
 
-  const initializeSession = async () => {
-    if (!ensureToken()) return null
-    try {
-      const response = await fetch(SESSIONS_URL, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ name: '新会话' }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(
-          `Session initialization failed (${response.status})${errorText ? `: ${errorText}` : ''}`
-        )
-      }
-
-      const responseJSON = (await response.json()) as {code: number, message?: string, data?: ChatSession}
-      if (responseJSON.code !== 0 || !responseJSON.data) {
-        throw new Error(responseJSON.message ?? 'Session initialization failed.')
-      }
-
-      const answer = responseJSON.data?.messages ?? []
-      const sessionId = responseJSON.data.id
-      if (!sessionId) {
-        throw new Error('Session ID is missing from the response.')
-      }
-
-      setActiveSessionId(sessionId)
-      setMessages(
-        answer.length > 0
-          ? [{ id: createId(), role: 'assistant', content: answer[0].content ?? '' }]
-          : []
-      )
-
-      await loadSessions(sessionId)
-      return sessionId
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to initialize session.'
-      setError(message)
-      return null
-    }
-  }
-
   const handleSend = async () => {
     if (isLoading) return
 
@@ -405,6 +362,49 @@ function App() {
       setError(message)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const initializeSession = async () => {
+    if (!ensureToken()) return null
+    try {
+      const response = await fetch(SESSIONS_URL, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: '新会话' }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(
+          `Session initialization failed (${response.status})${errorText ? `: ${errorText}` : ''}`
+        )
+      }
+
+      const responseJSON = (await response.json()) as {code: number, message?: string, data?: ChatSession}
+      if (responseJSON.code !== 0 || !responseJSON.data) {
+        throw new Error(responseJSON.message ?? 'Session initialization failed.')
+      }
+
+      const answer = responseJSON.data?.messages ?? []
+      const sessionId = responseJSON.data.id
+      if (!sessionId) {
+        throw new Error('Session ID is missing from the response.')
+      }
+
+      setActiveSessionId(sessionId)
+      setMessages(
+        answer.length > 0
+          ? [{ id: createId(), role: 'assistant', content: answer[0].content ?? '' }]
+          : []
+      )
+
+      await loadSessions(sessionId)
+      return sessionId
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to initialize session.'
+      setError(message)
+      return null
     }
   }
 

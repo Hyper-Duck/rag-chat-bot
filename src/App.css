@@ -336,8 +336,8 @@
 }
 
 .reference-icon__popup {
-  position: absolute;
-  bottom: 130%;
+  position: fixed;
+  top: 0;
   left: 0;
   width: 400px;
   max-height: 240px;
@@ -347,8 +347,17 @@
   padding: 10px 12px;
   border-radius: 12px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
-  display: none;
-  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.reference-icon__popup--open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .reference-icon__title {
@@ -394,11 +403,6 @@
   vertical-align: top;
 }
 
-.reference-icon:hover .reference-icon__popup,
-.reference-icon:focus .reference-icon__popup,
-.reference-icon:focus-within .reference-icon__popup {
-  display: block;
-}
 
 .typing-indicator {
   font-size: 13px;
