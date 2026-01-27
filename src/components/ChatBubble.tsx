@@ -167,6 +167,7 @@ const ReferenceIcon = ({
   const containerRef = useRef<HTMLSpanElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const [isPositioned, setIsPositioned] = useState(false)
   const [popupStyle, setPopupStyle] = useState<CSSProperties>({ top: 0, left: 0 })
   const title = chunk?.document_name ?? 'Reference'
@@ -183,13 +184,23 @@ const ReferenceIcon = ({
     )
   }, [])
 
-  const openPopup = useCallback(() => {
+  const openByHover = useCallback(() => {
+    if (isFocused) return
     setIsOpen(true)
+    console.log('openByHover')
   }, [])
-
+  
+  const openByFocus = useCallback(() => {
+    setIsFocused(true)
+    setIsOpen(true)
+    console.log('openByFocus')
+  }, [])
+  
   const closePopup = useCallback(() => {
+    console.log('closePopup')
     setIsOpen(false)
     setIsPositioned(false)
+    setIsFocused(false)
   }, [])
 
   const updatePlacement = useCallback(() => {
@@ -245,18 +256,6 @@ const ReferenceIcon = ({
           ref={popupRef}
           className={popupClassName}
           style={popupStyle}
-          onMouseEnter={openPopup}
-          onMouseLeave={(event) => {
-            if (!isWithinPopup(event.relatedTarget)) {
-              closePopup()
-            }
-          }}
-          onFocus={openPopup}
-          onBlur={(event) => {
-            if (!isWithinPopup(event.relatedTarget)) {
-              closePopup()
-            }
-          }}
         >
           <div className="reference-icon__title">
             {documentUrl ? (
@@ -280,13 +279,13 @@ const ReferenceIcon = ({
       role="button"
       tabIndex={0}
       aria-label={`Reference ${index}`}
-      onMouseEnter={openPopup}
+      onMouseEnter={openByHover}
       onMouseLeave={(event) => {
-        if (!isWithinPopup(event.relatedTarget)) {
+        if (!isWithinPopup(event.relatedTarget) && !isFocused) {
           closePopup()
         }
       }}
-      onFocus={openPopup}
+      onFocus={openByFocus}
       onBlur={(event) => {
         if (!isWithinPopup(event.relatedTarget)) {
           closePopup()
