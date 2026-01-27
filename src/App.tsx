@@ -533,6 +533,7 @@ function App() {
                 role={message.role}
                 content={message.content}
                 references={message.references}
+                documentBaseUrl={API_BASE_URL}
               />
             ))}
 

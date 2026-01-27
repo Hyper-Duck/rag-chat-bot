@@ -355,11 +355,40 @@
   font-size: 12px;
 }
 
+.reference-icon__title-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .reference-icon__content {
   display: block;
   font-size: 12px;
   white-space: pre-wrap;
   color: #e2e8f0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.reference-icon__content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  white-space: normal;
+}
+
+.reference-icon__content caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.reference-icon__content th,
+.reference-icon__content td {
+  border: 1px solid #334155;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
 }
 
 .reference-icon:hover .reference-icon__popup,
