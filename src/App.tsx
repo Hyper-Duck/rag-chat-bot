@@ -461,17 +461,12 @@ function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <div>
-          <h1>知识库 Chatbot</h1>
-          <p>RAG 演示项目</p>
-        </div>
-        <img src={logo} alt="logo" />
-        <div>
-        </div>
+        <h1>知识库 Chatbot</h1>
       </header>
 
       <main className="app__main">
         <section className="session-sidebar">
+          <img src={logo} alt="logo" />
           <div className="session-header">
             <h2>Sessions</h2>
             <button

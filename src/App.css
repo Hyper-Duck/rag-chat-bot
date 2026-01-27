@@ -1,14 +1,17 @@
 .app {
-  min-height: 100vh;
+  height: 100vh;
   background: #f8fafc;
   color: #0f172a;
+  display: flex;
+  flex-direction: column;
 }
 
 .app__header {
   padding: 24px 24px 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .app__header h1 {
@@ -17,18 +20,13 @@
   font-weight: 700;
 }
 
-.app__header p {
-  margin: 6px 0 0;
-  color: #475569;
-}
-
 .app__main {
   display: grid;
   padding: 24px;
-  gap: 4px;
   width: min(1280px, 100%);
   margin: 0 auto;
-  height: 620px;
+  flex: 1;
+  min-height: 0;
 }
 
 @media (min-width: 1024px) {
@@ -43,7 +41,6 @@
   overflow: auto;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   height: 100%;
 }
@@ -54,7 +51,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.chat-panel {
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
 }
 
 .session-header {
@@ -337,7 +340,7 @@
   bottom: 130%;
   left: 0;
   width: 400px;
-  max-height: 140px;
+  max-height: 240px;
   overflow-y: auto;
   background: #0f172a;
   color: #f8fafc;
