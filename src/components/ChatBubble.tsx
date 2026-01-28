@@ -167,7 +167,7 @@ const ReferenceIcon = ({
   const containerRef = useRef<HTMLSpanElement>(null)
   const popupRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [isFocused, setIsFocused] = useState(false)
+  const [isFocused, setIsFocused] = useState<number>(0)
   const [isPositioned, setIsPositioned] = useState(false)
   const [popupStyle, setPopupStyle] = useState<CSSProperties>({ top: 0, left: 0 })
   const title = chunk?.document_name ?? 'Reference'
@@ -176,31 +176,20 @@ const ReferenceIcon = ({
   const documentUrl = buildDocumentUrl(documentBaseUrl, documentId)
   const sanitizedContent = sanitizeReferenceContent(content)
 
-  const isWithinPopup = useCallback((target: EventTarget | null) => {
-    if (!target || !(target instanceof Node)) return false
-    return (
-      (containerRef.current?.contains(target) ?? false) ||
-      (popupRef.current?.contains(target) ?? false)
-    )
-  }, [])
-
   const openByHover = useCallback(() => {
     if (isFocused) return
     setIsOpen(true)
-    console.log('openByHover')
-  }, [])
+  }, [isFocused])
   
   const openByFocus = useCallback(() => {
-    setIsFocused(true)
+    setIsFocused(1)
     setIsOpen(true)
-    console.log('openByFocus')
   }, [])
   
   const closePopup = useCallback(() => {
-    console.log('closePopup')
     setIsOpen(false)
     setIsPositioned(false)
-    setIsFocused(false)
+    setIsFocused(0)
   }, [])
 
   const updatePlacement = useCallback(() => {
@@ -280,17 +269,9 @@ const ReferenceIcon = ({
       tabIndex={0}
       aria-label={`Reference ${index}`}
       onMouseEnter={openByHover}
-      onMouseLeave={(event) => {
-        if (!isWithinPopup(event.relatedTarget) && !isFocused) {
-          closePopup()
-        }
-      }}
+      onMouseLeave={() => { if (!isFocused) closePopup() }}
       onFocus={openByFocus}
-      onBlur={(event) => {
-        if (!isWithinPopup(event.relatedTarget)) {
-          closePopup()
-        }
-      }}
+      onBlur={closePopup}
     >
       <span className="reference-icon__badge">{index}</span>
       {popup}
