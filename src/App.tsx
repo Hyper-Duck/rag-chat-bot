@@ -38,9 +38,10 @@ type CompletionResponse = {
   }
 }
 
-const API_BASE_URL = 'http://192.168.50.112'
+const API_BASE_URL = 'http://192.168.50.112:9380'
 const CHAT_ID = '91a6e01ceba111f0ae6966a74df2239d'
-const API_TOKEN = 'ragflow-bQVbOM5dsmkgl4slLlerDZSe6ftqsezW9C8iroJw44M'
+const API_TOKEN = '9GG487RaEfGRiFh1pbUfyu-qm0daFi_v'
+
 const COMPLETIONS_URL = `${API_BASE_URL}/api/v1/chats/${CHAT_ID}/completions`
 const SESSIONS_URL = `${API_BASE_URL}/api/v1/chats/${CHAT_ID}/sessions`
 
@@ -199,6 +200,7 @@ function App() {
         question: trimmedMessage,
         stream,
         session_id: sessionId,
+        //reasoning: true,
       }
 
       const response = await fetch(COMPLETIONS_URL, {
@@ -229,6 +231,11 @@ function App() {
         let latestReference: ReferenceData | undefined
         let latestSessionId: string | undefined
 
+        /**
+         * Append a chunk of text to the message.
+         * @param chunk - The chunk of text to append to the message.
+         * @returns void
+         */
         const appendChunk = (chunk: string) => {
           if (!chunk) return
           setMessages((prev) =>
@@ -240,6 +247,11 @@ function App() {
           )
         }
 
+        /**
+         * Process a payload from the API response.
+         * @param payload - The payload to process.
+         * @returns void
+         */
         const processPayload = (payload: unknown) => {
           if (!payload) return
           if (typeof payload === 'string') {
@@ -293,6 +305,11 @@ function App() {
           }
         }
 
+        /**
+         * Process a line from the API response.
+         * @param line - The line to process.
+         * @returns void
+         */
         const processLine = (line: string) => {
           const trimmed = line.trim()
           if (!trimmed) return
